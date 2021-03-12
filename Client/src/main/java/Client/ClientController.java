@@ -20,7 +20,7 @@ public class ClientController implements Initializable {
     public Button btnDelete;
     public TextField txtFile;
     public Label lblStatus;
-    public ListView lstFiles;
+    public ListView<String> lstFiles;
 
     private Socket socket;
     private DataOutputStream os;
@@ -28,8 +28,6 @@ public class ClientController implements Initializable {
 
     private String username = "testuser";
     private final static String ROOT_FOLDER = "Client" + File.separator;
-
-    //private static final Logger LOGGER = LoggerFactory.getLogger(ClientController.class);
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -73,7 +71,7 @@ public class ClientController implements Initializable {
     public void downloadFile(ActionEvent actionEvent) {
         try {
             os.writeUTF("download");
-            os.writeUTF(txtFile.getText());
+            os.writeUTF(lstFiles.getSelectionModel().getSelectedItem().toString());
             String fileName = is.readUTF();
             File file = new File(ROOT_FOLDER + File.separator + username + File.separator + fileName);
             if (!file.exists()) {
@@ -96,7 +94,7 @@ public class ClientController implements Initializable {
     public void deleteFile(ActionEvent actionEvent) {
         try {
             os.writeUTF("delete");
-            os.writeUTF(txtFile.getText());
+            os.writeUTF(lstFiles.getSelectionModel().getSelectedItem().toString());
             String status = is.readUTF();
             lblStatus.setText(status);
             getFileList();

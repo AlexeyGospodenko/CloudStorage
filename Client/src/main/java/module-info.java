@@ -3,9 +3,6 @@ module Client {
     requires javafx.fxml;
     requires javafx.graphics;
 
-
     opens Client;
     exports Client;
-
-
 }

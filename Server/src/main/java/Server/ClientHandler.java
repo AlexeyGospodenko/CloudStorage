@@ -14,7 +14,7 @@ public class ClientHandler implements Runnable {
     DataInputStream is;
 
     private String username = "testuser";
-    private final static String ROOT_FOLDER = "Server" + File.separator;
+    private final static String ROOT_FOLDER = "Server" + File.separator + "Storage" + File.separator;
     private String folder;
 
     public ClientHandler(Socket socket) throws IOException {
@@ -28,18 +28,25 @@ public class ClientHandler implements Runnable {
         try {
             while (running) {
                 String command = is.readUTF();
+
+                //Получение списка файла из сервера
                 if ("list".equals(command)) {
                     folder = ROOT_FOLDER + is.readUTF();
+                    System.out.println(folder);
                     File file = new File(folder);
-                    if (!file.exists()) {
-                        file.createNewFile();
-                    }
                     StringBuilder listFiles = new StringBuilder();
-                    String[] arrListFile = file.list();
-                    for (String itemListFile : arrListFile) {
-                        listFiles.append(itemListFile).append(";");
+                    for (File f: file.listFiles()) {
+                        if (f.isDirectory()) {
+                            listFiles.append(f.getName()).append(";");
+                        }
+                    }
+                    for (File f: file.listFiles()) {
+                        if (!f.isDirectory()) {
+                            listFiles.append(f.getName()).append(";");
+                        }
                     }
                     os.writeUTF(listFiles.toString());
+                //Загрузка файла на сервер
                 } else if ("upload".equals(command)) {
                     try {
                         String fileName = is.readUTF();
@@ -60,6 +67,7 @@ public class ClientHandler implements Runnable {
                         LOGGER.error(null, e);
                         os.writeUTF("ERROR");
                     }
+                //Загрузка файла с сервера
                 } else if ("download".equals(command)) {
                     String fileName = is.readUTF();
                     File file = new File(folder + File.separator + fileName);
@@ -80,6 +88,8 @@ public class ClientHandler implements Runnable {
                     } else {
                         os.writeUTF("File " + fileName + " is not exists");
                     }
+
+                //Удаление файла с сервера
                 } else if ("delete".equals(command)) {
                     try {
                         String fileName = is.readUTF();
@@ -94,6 +104,7 @@ public class ClientHandler implements Runnable {
                         LOGGER.error(null, e);
                     }
                 }
+
             }
         } catch (SocketException e) {
             LOGGER.info("Connection with user \"{}\" was lost", username);
