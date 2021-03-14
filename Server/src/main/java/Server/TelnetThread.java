@@ -1,3 +1,4 @@
+//Поток для телнет сервера
 package Server;
 
 import org.slf4j.Logger;
@@ -23,11 +24,11 @@ public class TelnetThread extends Thread {
         ExecutorService executorClient = Executors.newFixedThreadPool(4);
         try {
             ServerSocket server = new ServerSocket(port);
-            LOGGER.info("Telnet Server started on port {}", server.getLocalPort());
+            LOGGER.info("Telnet Server started on port \"{}\"", server.getLocalPort());
             while (running) {
                 Socket socket = server.accept();
                 executorClient.execute(new TelnetHandler(socket));
-                LOGGER.info("Telnet client connected: {}", socket.getRemoteSocketAddress());
+                LOGGER.info("Telnet client connected: \"{}\"", socket.getRemoteSocketAddress());
             }
         } catch (IOException e) {
             running = false;
