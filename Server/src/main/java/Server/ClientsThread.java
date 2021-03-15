@@ -1,3 +1,4 @@
+//Поток для работы основного сервера
 package Server;
 
 import org.slf4j.Logger;
@@ -23,11 +24,11 @@ public class ClientsThread extends Thread {
         ExecutorService executorClient = Executors.newFixedThreadPool(4);
         try {
             ServerSocket server = new ServerSocket(port);
-            LOGGER.info("Server Client started on port {}", server.getLocalPort());
+            LOGGER.info("Server Client started on port \"{}\"", server.getLocalPort());
             while (running) {
                 Socket socket = server.accept();
                 executorClient.execute(new ClientHandler(socket));
-                LOGGER.info("Server Client connected: {}", socket.getInetAddress());
+                LOGGER.info("Server Client connected: \"{}\"", socket.getInetAddress());
             }
         } catch (IOException e) {
             running = false;

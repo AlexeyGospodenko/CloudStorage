@@ -1,9 +1,15 @@
+//Обработчик для основного сервера
 package Server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -14,7 +20,6 @@ public class ClientHandler implements Runnable {
     DataInputStream is;
 
     private String username = "testuser";
-    private final static String ROOT_FOLDER = "Server" + File.separator + "Storage" + File.separator;
     private String folder;
 
     public ClientHandler(Socket socket) throws IOException {
@@ -31,7 +36,7 @@ public class ClientHandler implements Runnable {
 
                 //Получение списка файла из сервера
                 if ("list".equals(command)) {
-                    folder = ROOT_FOLDER + is.readUTF();
+                    folder = ConsoleUtils.ROOT_FOLDER + is.readUTF();
                     System.out.println(folder);
                     File file = new File(folder);
                     StringBuilder listFiles = new StringBuilder();
@@ -77,7 +82,7 @@ public class ClientHandler implements Runnable {
                         os.writeLong(length);
                         FileInputStream fis = new FileInputStream(file);
                         int read;
-                        byte[] buffer = new byte[256];
+                        byte[] buffer = new byte[512];
                         while ((read = fis.read(buffer)) != -1) {
                             os.write(buffer, 0, read);
                         }
