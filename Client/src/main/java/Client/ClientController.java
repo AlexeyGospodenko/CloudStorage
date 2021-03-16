@@ -4,30 +4,34 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
-import java.util.ResourceBundle;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class ClientController implements Initializable {
     public Button btnUpload;
     public Button btnDownload;
     public Button btnDelete;
-    public TextField txtFile;
     public Label lblStatus;
-    public ListView<String> lstFiles;
+    public ListView<String> lstServerFiles;
+    public TableView tabLocalDir;
+    public TableColumn tableColumnLocalDirName;
+    public TableColumn tableColumnLocalDirType;
 
     private Socket socket;
     private DataOutputStream os;
     private DataInputStream is;
 
     private String username = "testuser";
-    private final static String ROOT_FOLDER = "Client" + File.separator;
+    private String currLocalDir = "Client" + File.separator + username;
+    private String currServerDir = "Client" + File.separator;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -35,23 +39,44 @@ public class ClientController implements Initializable {
             socket = new Socket("localhost", 1234);
             os = new DataOutputStream(socket.getOutputStream());
             is = new DataInputStream(socket.getInputStream());
+
+            //Заполнение таблицы файлов расположенных на локальной машине
+            tableColumnLocalDirName.setCellValueFactory(new PropertyValueFactory<FileItem, String>("fileName"));
+            tableColumnLocalDirType.setCellValueFactory(new PropertyValueFactory<FileItem, String>("fileType"));
+            fillFileList(Paths.get(currLocalDir));
+
+            //Заполнений таблицы файлов расположенных на сервере
             getFileList();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private void fillFileList(Path currDir) throws IOException {
+        ObservableList<FileItem> observableList = FXCollections.observableArrayList(new FileItem("..", ""));
+        Files.list(currDir).filter(isDir -> Files.isDirectory(isDir))
+                .forEach(item -> observableList
+                .add(new FileItem(item.getFileName().toString(),"dir")));
+
+        Files.list(currDir).filter(isDir -> !Files.isDirectory(isDir))
+                .forEach(item -> observableList
+                        .add(new FileItem(item.getFileName().toString(),"file")));
+        tabLocalDir.getItems().clear();
+        tabLocalDir.getItems().addAll(observableList);
+    }
+
     public void uploadFile(ActionEvent actionEvent) {
         try {
-            File file = new File("Client" + File.separator + username + File.separator + txtFile.getText());
+            FileItem fileItem = (FileItem) tabLocalDir.getSelectionModel().getSelectedItem();
+            File file = new File(currLocalDir + File.separator + fileItem.getFileName());
             if (file.exists()) {
                 os.writeUTF("upload");
-                os.writeUTF(txtFile.getText());
+                os.writeUTF(file.getName());
                 long length = file.length();
                 os.writeLong(length);
                 FileInputStream fis = new FileInputStream(file);
                 int read;
-                byte[] buffer = new byte[256];
+                byte[] buffer = new byte[512];
                 while ((read = fis.read(buffer)) != -1) {
                     os.write(buffer, 0, read);
                 }
@@ -71,9 +96,9 @@ public class ClientController implements Initializable {
     public void downloadFile(ActionEvent actionEvent) {
         try {
             os.writeUTF("download");
-            os.writeUTF(lstFiles.getSelectionModel().getSelectedItem().toString());
+            os.writeUTF(lstServerFiles.getSelectionModel().getSelectedItem());
             String fileName = is.readUTF();
-            File file = new File(ROOT_FOLDER + File.separator + username + File.separator + fileName);
+            File file = new File(currServerDir + File.separator + username + File.separator + fileName);
             if (!file.exists()) {
                 file.createNewFile();
             }
@@ -86,6 +111,7 @@ public class ClientController implements Initializable {
             }
             fos.close();
             lblStatus.setText("File " + fileName + " was downloaded");
+            fillFileList(Paths.get(currLocalDir));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -94,7 +120,7 @@ public class ClientController implements Initializable {
     public void deleteFile(ActionEvent actionEvent) {
         try {
             os.writeUTF("delete");
-            os.writeUTF(lstFiles.getSelectionModel().getSelectedItem().toString());
+            os.writeUTF(lstServerFiles.getSelectionModel().getSelectedItem());
             String status = is.readUTF();
             lblStatus.setText(status);
             getFileList();
@@ -109,7 +135,7 @@ public class ClientController implements Initializable {
             os.writeUTF(username);
             String[] listFile = is.readUTF().split(";");
             ObservableList<String> observableList = FXCollections.observableArrayList(listFile);
-            lstFiles.setItems(observableList);
+            lstServerFiles.setItems(observableList);
         } catch (IOException e) {
             e.printStackTrace();
         }

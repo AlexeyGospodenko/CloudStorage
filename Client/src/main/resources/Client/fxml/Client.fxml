@@ -4,67 +4,92 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane prefHeight="500.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Client.ClientController">
-    <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="500.0" prefWidth="800.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-        <ListView fx:id="lstFiles" accessibleRole="BUTTON" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="430.0" prefWidth="800.0" VBox.vgrow="ALWAYS">
+<AnchorPane prefHeight="500.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="Client.ClientController">
+    <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="500.0" prefWidth="800.0"
+          AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
+          AnchorPane.topAnchor="0.0">
+        <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="450.0" prefWidth="770.0">
             <VBox.margin>
-                <Insets left="15.0" right="15.0" top="15.0" />
+                <Insets left="15.0" right="15.0" top="15.0"/>
             </VBox.margin>
-        </ListView>
-        <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="55.0" prefHeight="55.0" prefWidth="800.0">
+            <TableView fx:id="tabLocalDir" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+                       prefHeight="430.0" prefWidth="380.0">
+                <columns>
+                    <TableColumn fx:id="tableColumnLocalDirName" prefWidth="250.0" text="Name"/>
+                    <TableColumn fx:id="tableColumnLocalDirType" prefWidth="130.0" text="Type"/>
+                </columns>
+                <HBox.margin>
+                    <Insets right="5.0"/>
+                </HBox.margin>
+            </TableView>
+            <ListView fx:id="lstServerFiles" accessibleRole="BUTTON" maxHeight="1.7976931348623157E308"
+                      maxWidth="1.7976931348623157E308" prefHeight="430.0" prefWidth="380.0">
+                <HBox.margin>
+                    <Insets left="5.0"/>
+                </HBox.margin>
+            </ListView>
+        </HBox>
+        <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="55.0" prefHeight="55.0"
+              prefWidth="800.0">
             <VBox.margin>
-                <Insets />
+                <Insets/>
             </VBox.margin>
             <VBox minHeight="55.0" minWidth="100.0" prefHeight="55.0" prefWidth="100.0">
                 <HBox.margin>
-                    <Insets left="15.0" />
+                    <Insets left="15.0"/>
                 </HBox.margin>
-                <Button fx:id="btnUpload" minHeight="30.0" minWidth="90.0" mnemonicParsing="false" onAction="#uploadFile" prefHeight="30.0" prefWidth="90.0" text="Upload" VBox.vgrow="ALWAYS">
+                <Button fx:id="btnUpload" minHeight="30.0" minWidth="90.0" mnemonicParsing="false"
+                        onAction="#uploadFile" prefHeight="30.0" prefWidth="90.0" text="Upload" VBox.vgrow="ALWAYS">
                     <VBox.margin>
-                        <Insets right="5.0" top="10.0" />
+                        <Insets right="5.0" top="10.0"/>
                     </VBox.margin>
                 </Button>
             </VBox>
             <VBox minHeight="55.0" minWidth="100.0" prefHeight="55.0" prefWidth="100.0">
                 <HBox.margin>
-                    <Insets />
+                    <Insets/>
                 </HBox.margin>
-                <Button fx:id="btnDownload" minHeight="30.0" minWidth="90.0" mnemonicParsing="false" onAction="#downloadFile" prefHeight="30.0" prefWidth="90.0" text="Download">
-                    <VBox.margin>
-                        <Insets right="5.0" top="10.0" />
-                    </VBox.margin>
-                </Button>
             </VBox>
-            <VBox minHeight="55.0" minWidth="100.0" prefHeight="55.0" prefWidth="100.0">
-                <Button fx:id="btnDelete" minHeight="30.0" minWidth="90.0" mnemonicParsing="false" onAction="#deleteFile" prefHeight="30.0" prefWidth="90.0" text="Delete">
-                    <VBox.margin>
-                        <Insets right="5.0" top="10.0" />
-                    </VBox.margin>
-                </Button>
+            <VBox minHeight="55.0" minWidth="100.0" prefHeight="55.0" prefWidth="100.0"/>
+            <VBox minHeight="55.0" minWidth="90.0" prefHeight="55.0" prefWidth="90.0"/>
+            <VBox minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="100.0">
+                <children>
+                    <Button fx:id="btnDownload" minHeight="30.0" minWidth="90.0" mnemonicParsing="false"
+                            onAction="#downloadFile" prefHeight="30.0" prefWidth="90.0" text="Download">
+                        <VBox.margin>
+                            <Insets right="5.0" top="10.0"/>
+                        </VBox.margin>
+                    </Button>
+                </children>
             </VBox>
-            <VBox minHeight="55.0" minWidth="100.0" prefHeight="55.0" prefWidth="100.0">
-                <TextField fx:id="txtFile" minHeight="30.0" minWidth="90.0" prefHeight="30.0" prefWidth="90.0">
-                    <VBox.margin>
-                        <Insets right="5.0" top="10.0" />
-                    </VBox.margin>
-                </TextField>
+            <VBox minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="100.0">
+                <children>
+                    <Button fx:id="btnDelete" minHeight="30.0" minWidth="90.0" mnemonicParsing="false"
+                            onAction="#deleteFile" prefHeight="30.0" prefWidth="90.0" text="Delete">
+                        <VBox.margin>
+                            <Insets right="5.0" top="10.0"/>
+                        </VBox.margin>
+                    </Button>
+                </children>
             </VBox>
-            <VBox minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="100.0" />
-            <VBox minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="100.0" />
-            <VBox alignment="TOP_RIGHT" maxHeight="55.0" maxWidth="1.7976931348623157E308" minHeight="55.0" minWidth="170.0" prefHeight="55.0" prefWidth="170.0" HBox.hgrow="ALWAYS">
-                <Label fx:id="lblStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" minHeight="30.0" minWidth="170.0" prefHeight="30.0" prefWidth="170.0" text="Label">
+            <VBox alignment="TOP_RIGHT" maxHeight="55.0" maxWidth="1.7976931348623157E308" minHeight="55.0"
+                  minWidth="170.0" prefHeight="55.0" prefWidth="170.0" HBox.hgrow="ALWAYS">
+                <Label fx:id="lblStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" minHeight="30.0"
+                       minWidth="170.0" prefHeight="30.0" prefWidth="170.0" text="Label">
                     <VBox.margin>
-                        <Insets left="5.0" right="5.0" top="10.0" />
+                        <Insets left="5.0" right="5.0" top="10.0"/>
                     </VBox.margin>
                 </Label>
-            <HBox.margin>
-               <Insets right="15.0" />
-            </HBox.margin>
+                <HBox.margin>
+                    <Insets right="15.0"/>
+                </HBox.margin>
             </VBox>
         </HBox>
     </VBox>
