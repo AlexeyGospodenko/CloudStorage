@@ -36,8 +36,7 @@ public class ClientHandler implements Runnable {
 
                 //Получение списка файла из сервера
                 if ("list".equals(command)) {
-                    folder = ConsoleUtils.ROOT_FOLDER + is.readUTF();
-                    System.out.println(folder);
+                    folder = ConsoleUtils.ROOT_FOLDER + File.separator + is.readUTF();
                     File file = new File(folder);
                     StringBuilder listFiles = new StringBuilder();
                     for (File f: file.listFiles()) {
