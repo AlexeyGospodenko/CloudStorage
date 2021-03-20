@@ -4,109 +4,117 @@ package Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.Socket;
-import java.net.SocketException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
-public class TelnetHandler implements Runnable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TelnetHandler.class);
-    private final Socket socket;
-    private final DataOutputStream os;
-    private final DataInputStream is;
-    private boolean running;
-    private final byte[] buffer;
+public class TelnetHandler {
+    private final Logger LOGGER = LoggerFactory.getLogger(TelnetHandler.class);
+    private final ByteBuffer buffer = ByteBuffer.allocate(512);
+    private final Map<Channel, Path> channelFolders;
 
-    public TelnetHandler(Socket socket) throws IOException {
-        this.socket = socket;
-        running = true;
-        os = new DataOutputStream(socket.getOutputStream());
-        is = new DataInputStream(socket.getInputStream());
-        buffer = new byte[512];
+    public TelnetHandler(Map<Channel, Path> channelFolders) {
+        this.channelFolders = channelFolders;
     }
 
-    @Override
-    public void run() {
+    public void Accept(Selector selector, SelectionKey key) {
         try {
-            os.write("type -help for get available commands\n\r".getBytes());
-            Path currFolder = Paths.get(ConsoleUtils.ROOT_FOLDER);
-            while (running) {
-                int bytesRead = is.read(buffer);
-                if (bytesRead < 0) {
-                    running = false;
-                    LOGGER.info("Connection with user \"{}\" was lost", socket.getRemoteSocketAddress());
-                } else {
-                    String command = new String(buffer, 0, bytesRead)
-                            .replaceAll("[\n\r]", "");
-                    if (command.isEmpty()) {
-                        continue;
-                    }
-
-                    if (command.equals("-help")) {
-                        String listCommands = ConsoleUtils.getCommandList();
-                        os.write(listCommands.getBytes());
-                    } else if (command.equals("ls")) {
-                        String listFiles = ConsoleUtils.getFileList(currFolder);
-                        os.write(listFiles.getBytes());
-                    } else if (command.startsWith("mkdir ")) {
-                        String[] dirName = command.split(" ");
-                        if (dirName.length == 2) {
-                            String result = ConsoleUtils.createDir(currFolder, dirName[1]) ? "success\n\r" : "failed\n\r";
-                            os.write(result.getBytes());
-                        }
-                    } else if (command.startsWith("touch ")) {
-                        String[] fileName = command.split(" ");
-                        if (fileName.length == 2) {
-                            String result = ConsoleUtils.createFile(currFolder, fileName[1]) ? "success\n\r" : "failed\n\r";
-                            os.write(result.getBytes());
-                        }
-                    } else if (command.startsWith("cd ")) {
-                        String[] dirName = command.split(" ");
-                        if (dirName.length == 2) {
-                            currFolder = ConsoleUtils.changeDirectory(currFolder, dirName[1]);
-                        }
-                    } else if (command.startsWith("rm ")) {
-                        String[] fileName = command.split(" ");
-                        if (fileName.length == 2) {
-                            String result = ConsoleUtils.removeFile(currFolder, fileName[1]) ? "success\n\r" : "failed\n\r";
-                            os.write(result.getBytes());
-                        }
-                    } else if (command.startsWith("copy ")) {
-                        String[] patName = command.split(" ");
-                        if (patName.length == 3) {
-                            String result = ConsoleUtils.copyFile(currFolder, patName[1], patName[2]) ? "success\n\r" : "failed\n\r";
-                            os.write(result.getBytes());
-                        }
-                    } else if (command.startsWith("cat ")) {
-                        String[] fileName = command.split(" ");
-                        if (fileName.length == 2) {
-                            Path catFileName = Paths.get(currFolder + File.separator + fileName[1]);
-                            if (Files.isDirectory(catFileName) || !Files.exists(catFileName)) {
-                                os.write(("File " + fileName[1] + " is not found\n\r").getBytes());
-                            } else {
-                                FileInputStream fis = new FileInputStream(catFileName.toFile());
-                                int read;
-                                while ((read = fis.read(buffer)) != -1) {
-                                    os.write(buffer, 0, read);
-                                }
-                                os.write("\n\r".getBytes());
-                                os.flush();
-                                fis.close();
-                            }
-                        }
-                    }
-
-                    os.write((socket.getLocalSocketAddress().toString() + " " + currFolder + ">: ").getBytes());
-                    os.flush();
-                }
-            }
-        } catch (SocketException e) {
-            LOGGER.info("Connection with user \"{}\" was lost", socket.getRemoteSocketAddress());
+            SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
+            channel.configureBlocking(false);
+            LOGGER.info("Telnet client connected: \"{}\"", channel.getRemoteAddress());
+            channel.register(selector, SelectionKey.OP_READ);
+            channel.write(ByteBuffer.wrap("Enter -help for get available commands\n\r".getBytes()));
+            //Ложим в МАПу ключ-канал который приняли, и даем ему базовое значение
+            channelFolders.put(channel, Paths.get(ConsoleUtils.ROOT_FOLDER));
         } catch (IOException e) {
             LOGGER.error(null, e);
-            running = false;
+        }
+    }
+
+    public void Read(Selector selector, SelectionKey key) {
+        try {
+            SocketChannel channel = (SocketChannel) key.channel();
+
+            int readBytes = channel.read(buffer);
+            //Если количество непрочитанных байт -1, то есть клиент сделал дисконнект,
+            // то удаляем его из МАПы и закрываем канал
+            if (readBytes < 0) {
+                LOGGER.info("Connection with user \"{}\" was lost", channel.getRemoteAddress());
+                channelFolders.remove(channel);
+                channel.close();
+            }
+            //Иначе читаем и выполняем команды которые пришли по телнету
+            else {
+                String command = new String(buffer.array(), 0, buffer.position())
+                        .replaceAll("[\n\r]", "");
+                buffer.clear();
+
+                if (command.equals("-help")) {
+                    String listCommands = ConsoleUtils.getCommandList();
+                    channel.write(ByteBuffer.wrap(listCommands.getBytes()));
+                } else if (command.equals("ls")) {
+                    String listFiles = ConsoleUtils.getFileList(channelFolders.get(channel));
+                    channel.write(ByteBuffer.wrap(listFiles.getBytes()));
+                } else if (command.startsWith("mkdir ")) {
+                    String[] dirName = command.split(" ");
+                    if (dirName.length == 2) {
+                        String result = ConsoleUtils.createDir(channelFolders.get(channel), dirName[1]) ? "success\n\r" : "failed\n\r";
+                        channel.write(ByteBuffer.wrap(result.getBytes()));
+                    }
+                } else if (command.startsWith("touch ")) {
+                    String[] fileName = command.split(" ");
+                    if (fileName.length == 2) {
+                        String result = ConsoleUtils.createFile(channelFolders.get(channel), fileName[1]) ? "success\n\r" : "failed\n\r";
+                        channel.write(ByteBuffer.wrap(result.getBytes()));
+                    }
+                } else if (command.startsWith("cd ")) {
+                    String[] dirName = command.split(" ");
+                    if (dirName.length == 2) {
+                        channelFolders.put(channel, ConsoleUtils.changeDirectory(channelFolders.get(channel), dirName[1]));
+                    }
+                } else if (command.startsWith("rm ")) {
+                    String[] fileName = command.split(" ");
+                    if (fileName.length == 2) {
+                        String result = ConsoleUtils.removeFile(channelFolders.get(channel), fileName[1]) ? "success\n\r" : "failed\n\r";
+                        channel.write(ByteBuffer.wrap(result.getBytes()));
+                    }
+                } else if (command.startsWith("copy ")) {
+                    String[] patName = command.split(" ");
+                    if (patName.length == 3) {
+                        String result = ConsoleUtils.copyFile(channelFolders.get(channel), patName[1], patName[2]) ? "success\n\r" : "failed\n\r";
+                        channel.write(ByteBuffer.wrap(result.getBytes()));
+                    }
+                } else if (command.startsWith("cat ")) {
+                    String[] fileName = command.split(" ");
+                    if (fileName.length == 2) {
+                        Path catFileName = Paths.get(channelFolders.get(channel) + File.separator + fileName[1]);
+                        if (Files.isDirectory(catFileName) || !Files.exists(catFileName)) {
+                            channel.write(ByteBuffer.wrap(("File " + fileName[1] + " is not found\n\r").getBytes()));
+                        } else {
+                            FileInputStream fis = new FileInputStream(catFileName.toFile());
+                            FileChannel fileChannel = fis.getChannel();
+                            ByteBuffer fileBuffer = ByteBuffer.allocate(512);
+                            while (fileChannel.read(fileBuffer) > 0) {
+                                fileBuffer.flip();
+                                channel.write(fileBuffer);
+                                fileBuffer.clear();
+                            }
+                            channel.write(ByteBuffer.wrap("\n\r".getBytes()));
+                            fis.close();
+                        }
+                    }
+                }
+                channel.write(ByteBuffer.wrap((channel.getLocalAddress().toString() + " " + channelFolders.get(channel) + ">: ").getBytes()));
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

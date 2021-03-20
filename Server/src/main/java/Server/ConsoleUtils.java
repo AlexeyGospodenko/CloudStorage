@@ -94,7 +94,7 @@ public final class ConsoleUtils {
                 //Выше ROOT_FOLDER не поднимаемся
                 newDir = (!currFolder.toString().equals(ROOT_FOLDER)) ? currFolder.getParent() : currFolder;
                 //Подняться в ROOT_FOLDER
-            } else if (dirName.equals("\\")) {
+            } else if (dirName.equals("\\") || dirName.equals("/")) {
                 newDir = Paths.get(ROOT_FOLDER);
             }
             //Сменить директорию на указанную

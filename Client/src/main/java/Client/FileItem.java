@@ -26,4 +26,5 @@ public class FileItem {
     public void setFileType(String fileType) {
         this.fileType.set(fileType);
     }
+
 }

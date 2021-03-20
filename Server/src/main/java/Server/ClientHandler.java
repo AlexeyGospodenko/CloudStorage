@@ -4,118 +4,151 @@ package Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
 
-public class ClientHandler implements Runnable {
-    private boolean running;
+public class ClientHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientHandler.class);
-    DataOutputStream os;
-    DataInputStream is;
+    private final Map<Channel, Path> channelDirs;
 
-    private String username = "testuser";
-    private String folder;
-
-    public ClientHandler(Socket socket) throws IOException {
-        running = true;
-        os = new DataOutputStream(socket.getOutputStream());
-        is = new DataInputStream(socket.getInputStream());
+    public ClientHandler(Map<Channel, Path> channelFolders) {
+        this.channelDirs = channelFolders;
     }
 
-    @Override
-    public void run() {
+    public void Accept(Selector selector, SelectionKey key) {
         try {
-            while (running) {
-                String command = is.readUTF();
+            SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
+            channel.configureBlocking(false);
+            LOGGER.info("Server Client connected: \"{}\"", channel.getRemoteAddress());
+            channel.register(selector, SelectionKey.OP_READ);
+        } catch (IOException e) {
+            LOGGER.error(null, e);
+        }
+    }
 
-                //Получение списка файла из сервера
-                if ("list".equals(command)) {
-                    folder = ConsoleUtils.ROOT_FOLDER + File.separator + is.readUTF();
-                    File file = new File(folder);
-                    StringBuilder listFiles = new StringBuilder();
-                    for (File f: file.listFiles()) {
-                        if (f.isDirectory()) {
-                            listFiles.append(f.getName()).append(";");
-                        }
-                    }
-                    for (File f: file.listFiles()) {
-                        if (!f.isDirectory()) {
-                            listFiles.append(f.getName()).append(";");
-                        }
-                    }
-                    os.writeUTF(listFiles.toString());
-                //Загрузка файла на сервер
-                } else if ("upload".equals(command)) {
-                    try {
-                        String fileName = is.readUTF();
-                        File file = new File(folder + File.separator + fileName);
-                        if (!file.exists()) {
-                            file.createNewFile();
-                        }
-                        long size = is.readLong();
-                        FileOutputStream fos = new FileOutputStream(file);
-                        byte[] buffer = new byte[256];
-                        for (int i = 0; i < (size + 255) / 256; i++) {
-                            int read = is.read(buffer);
-                            fos.write(buffer, 0, read);
-                        }
-                        fos.close();
-                        os.writeUTF("File " + file.getName() + " uploaded");
-                    } catch (IOException e) {
-                        LOGGER.error(null, e);
-                        os.writeUTF("ERROR");
-                    }
-                //Загрузка файла с сервера
-                } else if ("download".equals(command)) {
-                    String fileName = is.readUTF();
-                    File file = new File(folder + File.separator + fileName);
-                    if (file.exists()) {
-                        os.writeUTF(fileName);
-                        long length = file.length();
-                        os.writeLong(length);
-                        FileInputStream fis = new FileInputStream(file);
-                        int read;
-                        byte[] buffer = new byte[512];
-                        while ((read = fis.read(buffer)) != -1) {
-                            os.write(buffer, 0, read);
-                        }
-                        os.flush();
-                        fis.close();
+    public void Read(Selector selector, SelectionKey key) {
+        ByteBuffer buffer = ByteBuffer.allocate(512);
+        SocketChannel channel = (SocketChannel) key.channel();
+        try {
+            int readBytes = channel.read(buffer);
+            //Если количество непрочитанных байт -1, то есть клиент сделал дисконнект,
+            // то удаляем его из МАПы и закрываем канал
+            if (readBytes < 0) {
+                LOGGER.info("Connection with user \"{}\" was lost", channel.getRemoteAddress());
+                channelDirs.remove(channel);
+                channel.close();
+            }
+            //Иначе читаем и выполняем команды которые пришли от клиента
+            else {
+                String command = new String(buffer.array(), 0, buffer.position())
+                        .replaceAll("[\n\r]", "");
+                buffer.clear();
 
-                        //os.writeUTF("File " + fileName + " was downloaded");
-                    } else {
-                        os.writeUTF("File " + fileName + " is not exists");
-                    }
-
-                //Удаление файла с сервера
-                } else if ("delete".equals(command)) {
-                    try {
-                        String fileName = is.readUTF();
-                        File file = new File(folder + File.separator + fileName);
-                        if (file.exists()) {
-                            file.delete();
-                            os.writeUTF("File " + fileName + " was delete");
-                        } else {
-                            os.writeUTF("File " + fileName + " is not exists");
-                        }
-                    } catch (IOException e) {
-                        LOGGER.error(null, e);
+                //Клиент при коннекте должен отправить свое имя пользователя
+                if (command.startsWith("-username")) {
+                    String[] args = command.split(" ");
+                    if (args.length == 2) {
+                        String username = args[1];
+                        //и положить его в МАПу ключ=канал, директория=базовая директория + имя пользователя
+                        channelDirs.put(channel, Paths.get(ConsoleUtils.ROOT_FOLDER + File.separator + username));
+                        channel.write(ByteBuffer.wrap("Connected".getBytes()));
                     }
                 }
 
+                else if (command.equals("-list")) {
+                    Path dir = channelDirs.get(channel);
+                    if (Files.exists(dir) && Files.isDirectory(dir)) {
+                        StringBuilder listFiles = new StringBuilder();
+                        try {
+                            Files.list(dir)
+                                    .filter(isDir -> Files.isDirectory(isDir))
+                                    .forEach(path -> listFiles.append(path.getFileName())
+                                            .append(':')
+                                            .append("dir")
+                                            .append(";"));
+
+                            Files.list(dir)
+                                    .filter(isDir -> !Files.isDirectory(isDir))
+                                    .forEach(path -> listFiles.append(path.getFileName())
+                                            .append(':')
+                                            .append("file")
+                                            .append(";"));
+                        } catch (IOException e) {
+                            LOGGER.error(null, e);
+                        }
+                        listFiles.append("end");
+                        channel.write(ByteBuffer.wrap(listFiles.toString().getBytes()));
+                    }
+                }
+
+                else if (command.startsWith("-delete ")) {
+                    String[] args = command.split(" ");
+                    if (args.length == 2) {
+                        String fileName = args[1];
+                        String result = ConsoleUtils.removeFile(channelDirs.get(channel), fileName) ?
+                                "File deleted successfully\n\r" : "File has not been deleted\n\r";
+                        channel.write(ByteBuffer.wrap(result.getBytes()));
+                    }
+                }
+
+                else if (command.startsWith("-upload ")) {
+                    String[] args = command.split(" ");
+                    if (args.length == 2) {
+                        Path fileName = Paths.get(channelDirs.get(channel) + File.separator + args[1]);
+                        FileChannel fileChannel = (new FileOutputStream(fileName.toFile())).getChannel();
+                        ByteBuffer fileBuffer = ByteBuffer.allocate(512);
+                        while (channel.read(fileBuffer) != 0) {
+                            fileBuffer.flip();
+                            while (fileBuffer.hasRemaining()) {
+                                fileChannel.write(fileBuffer);
+                            }
+                            fileBuffer.clear();
+                        }
+                        fileChannel.close();
+                    }
+                    channel.write(ByteBuffer.wrap(("File uploaded successfully").getBytes()));
+                }
+
+                else if (command.startsWith("-download ")) {
+                    String[] args = command.split(" ");
+                    if (args.length == 2) {
+                        Path fileName = Paths.get(channelDirs.get(channel) + File.separator + args[1]);
+                        if (Files.exists(fileName)) {
+                            String size = Long.toString(Files.size(fileName));
+                            System.out.println(size);
+                            channel.write(ByteBuffer.wrap(size.getBytes()));
+                            FileChannel fileChannel = (new FileInputStream(fileName.toFile())).getChannel();
+                            ByteBuffer fileBuffer = ByteBuffer.allocate(512);
+                            while (fileChannel.read(fileBuffer) != -1 ) {
+                                fileBuffer.flip();
+                                channel.write(fileBuffer);
+                                fileBuffer.clear();
+                                System.out.println(1);
+                            }
+                            fileChannel.close();
+                        }
+                    }
+                }
             }
         } catch (SocketException e) {
-            LOGGER.info("Connection with user \"{}\" was lost", username);
-            running = false;
+            try {
+                LOGGER.info("Connection with user \"{}\" was lost", channel.getRemoteAddress());
+                channelDirs.remove(channel);
+                channel.close();
+            } catch (IOException ioException) {
+                LOGGER.error(null, e);
+            }
         } catch (IOException e) {
-            LOGGER.error(null, e);
-            running = false;
+            e.printStackTrace();
         }
     }
 
