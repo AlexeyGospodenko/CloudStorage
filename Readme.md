@@ -7,11 +7,13 @@
 
 Пример запуска серверной части
 `java.exe -jar Server-1.0-SNAPSHOT-jar-with-dependencies.jar 1234 2345 jdbc:oracle:thin:@localhost:1521:xe`
+!Важно - выбарть свой сид для oracle
 
 Клиентская часть - `Client/src/main/java/Client/Client.java` - по умолчанию коннект localhost 1234
 
 Пример запуска клиентской части
 `java.exe --module-path "E:\Distr\Java\javafx-sdk-15.0.1\lib" --add-modules javafx.controls,javafx.fxml -jar Client-1.0-SNAPSHOT-jar-with-dependencies.jar`
+!Важно - выбарть свой путь до javafx-sdk
 
 #### Основной функционал проекта
 
@@ -59,5 +61,3 @@
 - [x] ls выровнять вывод чтобы не влиял размер наименования файла
 - [x] Переделать File на Path (IO -> NIO)
 - [x] Переделать Socket'ы на SockenChannel'ы (IO -> NIO)
-
-
