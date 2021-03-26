@@ -1,3 +1,6 @@
+#### Установка серверной части
+Предварительно создать схему в ORACLE под SYS https://github.com/AlexeyGospodenko/CloudStorage/blob/master/DBInstall.md
+
 #### Запуск
 
 Серверная часть - `Server/src/main/java/Server/Server.java`
