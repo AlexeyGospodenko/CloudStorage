@@ -2,7 +2,7 @@
 Предварительно создать схему в ORACLE под SYS https://github.com/AlexeyGospodenko/CloudStorage/blob/master/DBInstall.md
 
 #### Запуск
-
+jdk-15.0.1
 Серверная часть - `Server/src/main/java/Server/Server.java`
 Порт для клиентских подключений 1234, можно передать первым аргументом
 Для для телнета 2345, можно задать вторым аргументов
