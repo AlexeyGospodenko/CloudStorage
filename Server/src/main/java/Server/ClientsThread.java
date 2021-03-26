@@ -6,11 +6,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Channel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,10 +20,20 @@ public class ClientsThread extends Thread {
     private final int port;
     boolean running = true;
 
-    private Map<Channel, Path> channelDirs = new HashMap<>();
+    private final Map<Channel, Path> channelDirs = new HashMap<>();
 
     public ClientsThread(int port) {
         this.port = port;
+        Path mainDir = Paths.get(ConsoleUtils.ROOT_FOLDER);
+
+        if (!Files.exists(mainDir)) {
+            try {
+                Files.createDirectory(mainDir);
+            } catch (IOException e) {
+                LOGGER.error(null, e);
+
+            }
+        }
     }
 
     @Override
@@ -45,10 +54,8 @@ public class ClientsThread extends Thread {
                     SelectionKey key = iterator.next();
                     if (key.isAcceptable()) {
                         clientHandler.Accept(selector, key);
-                    }
-                    else if (key.isReadable()) {
-                        clientHandler.Read(selector, key); //Необходимо ли вызывать этот метод в отедельном потоке
-                                                            //для одновременного выполнения команд/up-download'ов разными клиентами?
+                    } else if (key.isReadable()) {
+                        clientHandler.Read(selector, key);
                     }
                     iterator.remove();
                 }
