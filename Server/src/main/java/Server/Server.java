@@ -9,5 +9,8 @@ public class Server {
         int portTelnetServer = (args.length == 2) ? Integer.parseInt(args[1]) : 2345;
         TelnetThread telnetThread = new TelnetThread(portTelnetServer);
         telnetThread.start();
+
+        String jdbc = (args.length == 3) ? args[2] : "jdbc:oracle:thin:@localhost:1521:xe";
+        DatabaseService.initInstance(jdbc);
     }
 }

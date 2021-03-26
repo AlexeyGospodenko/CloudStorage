@@ -13,16 +13,16 @@ public final class ConsoleUtils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TelnetHandler.class);
 
-    public static final String ROOT_FOLDER = "Server" + File.separator + "Storage";
+    public static final String ROOT_FOLDER = "Storage";
     private static final String LS_COMMAND = "   ls\t\t\t view all files from current directory\n\r";
     private static final String MKDIR_COMMAND = "   mkdir <dirname>\t create directory\n\r";
-    private static final String TOUCH_COMMAD = "   touch <filename>\t create file\n\r";
-    private static final String REMOVE_COMMAD = "   remove <name>\t remove file or directory\n\r";
-    private static final String COPY_COMMAD = "   copy <src> <target>\t copy file src=filename target=filename\n\r";
-    private static final String CAT_COMMAD = "   cat <filename>\t display content file\n\r";
-    private static final String CD_COMMAD = "   cd <dirname>\t\t change directory\n\r";
-    private static final String CD_UP_COMMAD = "   cd ..\t\t change to upper directory\n\r";
-    private static final String CD_ROOT_COMMAD = "   cd \\\t\t\t change to root directory\n\r";
+    private static final String TOUCH_COMMAND = "   touch <filename>\t create file\n\r";
+    private static final String REMOVE_COMMAND = "   remove <name>\t remove file or directory\n\r";
+    private static final String COPY_COMMAND = "   copy <src> <target>\t copy file src=filename target=filename\n\r";
+    private static final String CAT_COMMAND = "   cat <filename>\t display content file\n\r";
+    private static final String CD_COMMAND = "   cd <dirname>\t\t change directory\n\r";
+    private static final String CD_UP_COMMAND = "   cd ..\t\t change to upper directory\n\r";
+    private static final String CD_ROOT_COMMAND = "   cd \\\t\t\t change to root directory\n\r";
 
     private ConsoleUtils() {
     }
@@ -31,13 +31,13 @@ public final class ConsoleUtils {
     public static String getCommandList() {
         return LS_COMMAND +
                 MKDIR_COMMAND +
-                TOUCH_COMMAD +
-                REMOVE_COMMAD +
-                COPY_COMMAD +
-                CAT_COMMAD +
-                CD_COMMAD +
-                CD_UP_COMMAD +
-                CD_ROOT_COMMAD;
+                TOUCH_COMMAND +
+                REMOVE_COMMAND +
+                COPY_COMMAND +
+                CAT_COMMAND +
+                CD_COMMAND +
+                CD_UP_COMMAND +
+                CD_ROOT_COMMAND;
     }
 
     //Получение списка файлов в директории
@@ -150,11 +150,6 @@ public final class ConsoleUtils {
             LOGGER.error(null, e);
         }
         return false;
-    }
-
-    public static boolean getPathForCat (Path currFolder, String fileName) {
-        Path catFileName = Paths.get(currFolder + File.separator + fileName);
-        return (!Files.isDirectory(catFileName) && Files.exists(catFileName)) ? true : false;
     }
 
 }

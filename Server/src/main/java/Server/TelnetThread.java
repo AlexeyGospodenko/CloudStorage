@@ -21,7 +21,7 @@ public class TelnetThread extends Thread {
     private final int port;
     boolean running = true;
     //Мап, в которой будем хранить состояние текущих директорий для каналов
-    private Map<Channel, Path> channelDirs = new HashMap<>();
+    private final Map<Channel, Path> channelDirs = new HashMap<>();
 
     public TelnetThread(int port) {
         this.port = port;
